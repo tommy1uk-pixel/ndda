@@ -96,7 +96,9 @@ async function createRecord(resource, payload, env, admin) {
 export async function onRequest(context) {
   const { request, env, params } = context;
   const method = request.method.toUpperCase();
-  const segments = String(params.path || "").split("/").filter(Boolean);
+  const segments = Array.isArray(params.path)
+    ? params.path.filter(Boolean)
+    : String(params.path || "").split("/").filter(Boolean);
   try {
     if (method === "GET" && segments.join("/") === "public/league") return json(await publicLeague(env));
     if (method === "POST" && segments.join("/") === "applications") {
@@ -150,3 +152,4 @@ export async function onRequest(context) {
     return json({ error: error.message === "Invalid number" ? error.message : "Unable to complete the request" }, 500);
   }
 }
+
