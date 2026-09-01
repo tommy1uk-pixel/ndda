@@ -85,12 +85,13 @@ async function bootstrap(env) {
 }
 
 async function publicLeague(env) {
-  const [fixtures, results, players] = await Promise.all([
-    env.DB.prepare("SELECT f.id, f.starts_at, ht.name AS home_team, at.name AS away_team, v.name AS venue_name, v.town FROM fixtures f JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id LEFT JOIN venues v ON v.id=f.venue_id WHERE f.status='scheduled' AND f.starts_at >= datetime('now') ORDER BY f.starts_at LIMIT 12").all(),
-    env.DB.prepare("SELECT f.starts_at, ht.name AS home_team, at.name AS away_team, r.home_score, r.away_score FROM results r JOIN fixtures f ON f.id=r.fixture_id JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id WHERE r.published=1 ORDER BY f.starts_at DESC LIMIT 12").all(),
-    env.DB.prepare("SELECT p.name, t.name AS team_name, p.appearances, p.wins, p.one_eighties, p.highest_checkout FROM players p LEFT JOIN teams t ON t.id=p.team_id WHERE p.registration_status='registered' ORDER BY p.one_eighties DESC, p.highest_checkout DESC LIMIT 25").all(),
+  const [fixtures, results, players, teams] = await Promise.all([
+    env.DB.prepare("SELECT f.id, f.starts_at, ht.name AS home_team, at.name AS away_team, ht.division, v.name AS venue_name, v.town FROM fixtures f JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id LEFT JOIN venues v ON v.id=f.venue_id WHERE f.status='scheduled' AND f.starts_at >= datetime('now') ORDER BY f.starts_at LIMIT 50").all(),
+    env.DB.prepare("SELECT f.starts_at, ht.name AS home_team, at.name AS away_team, ht.division, r.home_score, r.away_score FROM results r JOIN fixtures f ON f.id=r.fixture_id JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id WHERE r.published=1 ORDER BY f.starts_at DESC LIMIT 100").all(),
+    env.DB.prepare("SELECT p.name, t.name AS team_name, t.division, p.appearances, p.wins, p.one_eighties, p.highest_checkout FROM players p LEFT JOIN teams t ON t.id=p.team_id WHERE p.registration_status='registered' ORDER BY p.one_eighties DESC, p.highest_checkout DESC LIMIT 100").all(),
+    env.DB.prepare("SELECT id, name, division FROM teams WHERE active=1 ORDER BY division, name").all(),
   ]);
-  return { fixtures: fixtures.results, results: results.results, players: players.results };
+  return { fixtures: fixtures.results, results: results.results, players: players.results, teams: teams.results };
 }
 
 async function createRecord(resource, payload, env, admin) {
