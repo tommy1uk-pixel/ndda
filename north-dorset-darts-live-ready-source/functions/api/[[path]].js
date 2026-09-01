@@ -125,6 +125,45 @@ async function createRecord(resource, payload, env, admin) {
   throw new Error("Unsupported resource");
 }
 
+async function generateFixtures(payload, env, admin) {
+  const divisions = ["Premier Division", "Division One", "Division Two", "Division Three", "Division Four"];
+  const division = clean(payload.division, 80);
+  const startDate = clean(payload.start_date, 10);
+  const startTime = clean(payload.start_time || "20:00", 5);
+  const homeAndAway = payload.home_and_away !== false;
+  if (!divisions.includes(division) || !/^\d{4}-\d{2}-\d{2}$/.test(startDate) || !/^\d{2}:\d{2}$/.test(startTime)) throw new Error("Invalid fixture generator settings");
+  const existing = await env.DB.prepare("SELECT COUNT(*) AS total FROM fixtures f JOIN teams t ON t.id=f.home_team_id WHERE t.division=?").bind(division).first();
+  if (Number(existing?.total || 0) > 0) throw new Error("This division already has fixtures. Remove them before generating a new season.");
+  const teamRows = await env.DB.prepare("SELECT id, venue_id FROM teams WHERE division=? AND active=1 ORDER BY name").bind(division).all();
+  const teams = teamRows.results;
+  if (teams.length < 2) throw new Error("Add at least two active teams to this division first.");
+  const rotation = [...teams];
+  if (rotation.length % 2) rotation.push(null);
+  const firstLeg = [];
+  for (let round = 0; round < rotation.length - 1; round++) {
+    const matches = [];
+    for (let i = 0; i < rotation.length / 2; i++) {
+      const left = rotation[i], right = rotation[rotation.length - 1 - i];
+      if (!left || !right) continue;
+      const swap = (round + i) % 2 === 1;
+      matches.push(swap ? { home:right, away:left } : { home:left, away:right });
+    }
+    firstLeg.push(matches);
+    rotation.splice(1, 0, rotation.pop());
+  }
+  const rounds = homeAndAway ? [...firstLeg, ...firstLeg.map(matches => matches.map(({home,away}) => ({home:away,away:home})))] : firstLeg;
+  const statements = [];
+  rounds.forEach((matches, roundIndex) => {
+    const date = new Date(`${startDate}T12:00:00Z`);
+    date.setUTCDate(date.getUTCDate() + roundIndex * 7);
+    const startsAt = `${date.toISOString().slice(0,10)}T${startTime}:00`;
+    matches.forEach(({home,away}) => statements.push(env.DB.prepare("INSERT INTO fixtures (home_team_id, away_team_id, venue_id, starts_at, status) VALUES (?, ?, ?, ?, 'scheduled')").bind(home.id, away.id, home.venue_id || null, startsAt)));
+  });
+  await env.DB.batch(statements);
+  await audit(env, admin, "generate", "fixtures", division, { rounds:rounds.length, fixtures:statements.length, startDate, startTime, homeAndAway });
+  return { fixtures: statements.length, rounds: rounds.length };
+}
+
 export async function onRequest(context) {
   const { request, env, params } = context;
   const method = request.method.toUpperCase();
@@ -163,6 +202,11 @@ export async function onRequest(context) {
       await audit(env,admin,"update_stats","player",id,payload);
       return json({ok:true});
     }
+    if (method === "POST" && segments[1] === "generate-fixtures") {
+      if (!canWrite(admin)) return json({ error: "Insufficient permission" }, 403);
+      const generated = await generateFixtures(await body(request), env, admin);
+      return json({ ok:true, ...generated }, 201);
+    }
     if (method === "POST" && segments[1]) {
       if (!canWrite(admin)) return json({ error: "Insufficient permission" }, 403);
       const payload = await body(request), id = await createRecord(segments[1],payload,env,admin);
@@ -181,6 +225,7 @@ export async function onRequest(context) {
     return json({ error: "Not found" }, 404);
   } catch (error) {
     console.error(error);
-    return json({ error: error.message === "Invalid number" ? error.message : "Unable to complete the request" }, 500);
+    const expected = ["Invalid number", "Invalid fixture generator settings", "This division already has fixtures. Remove them before generating a new season.", "Add at least two active teams to this division first."];
+    return json({ error: expected.includes(error.message) ? error.message : "Unable to complete the request" }, expected.includes(error.message) ? 422 : 500);
   }
 }
