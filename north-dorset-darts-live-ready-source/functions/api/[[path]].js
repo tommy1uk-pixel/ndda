@@ -75,11 +75,11 @@ async function body(request) {
 async function bootstrap(env) {
   const [applications, teams, players, fixtures, results, venues] = await Promise.all([
     env.DB.prepare("SELECT * FROM applications ORDER BY created_at DESC LIMIT 250").all(),
-    env.DB.prepare("SELECT t.*, v.name AS venue_name, v.town AS venue_town FROM teams t LEFT JOIN venues v ON v.id=t.venue_id ORDER BY t.name").all(),
-    env.DB.prepare("SELECT p.*, t.name AS team_name FROM players p LEFT JOIN teams t ON t.id=p.team_id ORDER BY p.name").all(),
+    env.DB.prepare("SELECT t.*, v.name AS venue_name, v.town AS venue_town FROM teams t LEFT JOIN venues v ON v.id=t.venue_id WHERE t.active=1 ORDER BY t.name").all(),
+    env.DB.prepare("SELECT p.*, t.name AS team_name FROM players p LEFT JOIN teams t ON t.id=p.team_id WHERE p.registration_status<>'inactive' ORDER BY p.name").all(),
     env.DB.prepare("SELECT f.*, ht.name AS home_team, at.name AS away_team, v.name AS venue_name FROM fixtures f JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id LEFT JOIN venues v ON v.id=f.venue_id ORDER BY f.starts_at DESC LIMIT 250").all(),
     env.DB.prepare("SELECT r.*, f.starts_at, ht.name AS home_team, at.name AS away_team FROM results r JOIN fixtures f ON f.id=r.fixture_id JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id ORDER BY f.starts_at DESC LIMIT 250").all(),
-    env.DB.prepare("SELECT * FROM venues ORDER BY name").all(),
+    env.DB.prepare("SELECT * FROM venues WHERE active=1 ORDER BY name").all(),
   ]);
   return { applications: applications.results, teams: teams.results, players: players.results, fixtures: fixtures.results, results: results.results, venues: venues.results };
 }
@@ -215,10 +215,13 @@ export async function onRequest(context) {
     }
     if (method === "DELETE" && segments[1] && segments[2]) {
       if (!canAdminister(admin)) return json({ error: "Administrator permission required" }, 403);
-      const allowed = { teams:"teams", players:"players", fixtures:"fixtures", results:"results", venues:"venues" };
-      const table = allowed[segments[1]];
-      if (!table) return json({ error:"Unsupported resource" },422);
-      await env.DB.prepare(`DELETE FROM ${table} WHERE id=?`).bind(integer(segments[2],1)).run();
+      const resource = segments[1], id = integer(segments[2],1);
+      if (resource === "teams") await env.DB.prepare("UPDATE teams SET active=0, updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run();
+      else if (resource === "venues") await env.DB.prepare("UPDATE venues SET active=0, updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run();
+      else if (resource === "players") await env.DB.prepare("UPDATE players SET registration_status='inactive', updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run();
+      else if (resource === "fixtures") await env.DB.prepare("DELETE FROM fixtures WHERE id=?").bind(id).run();
+      else if (resource === "results") await env.DB.prepare("DELETE FROM results WHERE id=?").bind(id).run();
+      else return json({ error:"Unsupported resource" },422);
       await audit(env,admin,"delete",segments[1],segments[2]);
       return json({ok:true});
     }
