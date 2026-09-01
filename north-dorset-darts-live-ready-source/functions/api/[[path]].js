@@ -266,6 +266,13 @@ export async function onRequest(context) {
       else if (resource === "fixtures") await env.DB.prepare("DELETE FROM fixtures WHERE id=?").bind(id).run();
       else if (resource === "results") await env.DB.prepare("DELETE FROM results WHERE id=?").bind(id).run();
       else if (resource === "calendar-events") await env.DB.prepare("DELETE FROM calendar_events WHERE id=?").bind(id).run();
+      else if (resource === "cup-ties") {
+        const tie = await env.DB.prepare("SELECT fixture_id FROM cup_ties WHERE id=?").bind(id).first();
+        if (!tie) return json({ error:"Cup game not found" },404);
+        await env.DB.prepare("DELETE FROM cup_ties WHERE id=?").bind(id).run();
+        if (tie.fixture_id) await env.DB.prepare("DELETE FROM fixtures WHERE id=?").bind(tie.fixture_id).run();
+        await env.DB.prepare("UPDATE players SET appearances=COALESCE((SELECT SUM(appeared) FROM match_player_stats WHERE player_id=players.id),0),wins=COALESCE((SELECT SUM(singles_wins) FROM match_player_stats WHERE player_id=players.id),0),one_eighties=COALESCE((SELECT SUM(one_eighties) FROM match_player_stats WHERE player_id=players.id),0),highest_checkout=COALESCE((SELECT MAX(highest_checkout) FROM match_player_stats WHERE player_id=players.id),0),highest_shot_in=COALESCE((SELECT MAX(highest_shot_in) FROM match_player_stats WHERE player_id=players.id),0),updated_at=CURRENT_TIMESTAMP").run();
+      }
       else return json({ error:"Unsupported resource" },422);
       await audit(env,admin,"delete",segments[1],segments[2]);
       return json({ok:true});
