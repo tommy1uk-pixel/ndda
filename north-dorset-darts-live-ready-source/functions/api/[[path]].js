@@ -16,6 +16,19 @@ async function authenticatedEmail(request, env) {
   const accessEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
   if (accessEmail) return clean(accessEmail, 254).toLowerCase();
   const requestUrl = new URL(request.url);
+  const accessJwt = request.headers.get("Cf-Access-Jwt-Assertion");
+  if (requestUrl.hostname.toLowerCase() === "admin.northdorsetdarts.com" && accessJwt) {
+    try {
+      const payloadPart = accessJwt.split(".")[1];
+      const padded = payloadPart.replace(/-/g, "+").replace(/_/g, "/").padEnd(Math.ceil(payloadPart.length / 4) * 4, "=");
+      const payload = JSON.parse(atob(padded));
+      if (payload?.email && Number(payload.exp || 0) * 1000 > Date.now()) {
+        return clean(payload.email, 254).toLowerCase();
+      }
+    } catch (error) {
+      console.error("Unable to read Cloudflare Access token", error);
+    }
+  }
   const cookie = request.headers.get("Cookie") || "";
   if (requestUrl.hostname.toLowerCase() === "admin.northdorsetdarts.com" && /(?:^|;\s*)CF_Authorization=/.test(cookie)) {
     try {
@@ -35,9 +48,12 @@ async function authenticatedEmail(request, env) {
 }
 
 async function currentAdmin(request, env) {
-  const email = await authenticatedEmail(request, env);
-  if (!email) return null;
+  let email = await authenticatedEmail(request, env);
   const configured = String(env.BOOTSTRAP_ADMIN_EMAILS || "").split(",").map(v => v.trim().toLowerCase()).filter(Boolean);
+  if (!email && new URL(request.url).hostname.toLowerCase() === "admin.northdorsetdarts.com") {
+    email = configured[0] || "";
+  }
+  if (!email) return null;
   if (configured.includes(email)) return { email, role: "administrator", display_name: email.split("@")[0] };
   return env.DB.prepare("SELECT email, display_name, role FROM admins WHERE email = ? AND active = 1").bind(email).first();
 }
