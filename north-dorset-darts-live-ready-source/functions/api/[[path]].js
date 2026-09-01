@@ -12,15 +12,30 @@ function sameOrigin(request) {
   return !origin || origin === new URL(request.url).origin;
 }
 
-function authenticatedEmail(request, env) {
+async function authenticatedEmail(request, env) {
   const accessEmail = request.headers.get("Cf-Access-Authenticated-User-Email");
   if (accessEmail) return clean(accessEmail, 254).toLowerCase();
+  const requestUrl = new URL(request.url);
+  const cookie = request.headers.get("Cookie") || "";
+  if (requestUrl.hostname.toLowerCase() === "admin.northdorsetdarts.com" && /(?:^|;\s*)CF_Authorization=/.test(cookie)) {
+    try {
+      const identityResponse = await fetch(`${requestUrl.origin}/cdn-cgi/access/get-identity`, {
+        headers: { Cookie: cookie },
+      });
+      if (identityResponse.ok) {
+        const identity = await identityResponse.json();
+        if (identity?.email) return clean(identity.email, 254).toLowerCase();
+      }
+    } catch (error) {
+      console.error("Unable to read Cloudflare Access identity", error);
+    }
+  }
   if (env.ENVIRONMENT === "development") return clean(request.headers.get("X-Dev-User"), 254).toLowerCase();
   return "";
 }
 
 async function currentAdmin(request, env) {
-  const email = authenticatedEmail(request, env);
+  const email = await authenticatedEmail(request, env);
   if (!email) return null;
   const configured = String(env.BOOTSTRAP_ADMIN_EMAILS || "").split(",").map(v => v.trim().toLowerCase()).filter(Boolean);
   if (configured.includes(email)) return { email, role: "administrator", display_name: email.split("@")[0] };
@@ -152,4 +167,3 @@ export async function onRequest(context) {
     return json({ error: error.message === "Invalid number" ? error.message : "Unable to complete the request" }, 500);
   }
 }
-
