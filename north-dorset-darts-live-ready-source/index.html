@@ -15,6 +15,7 @@
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="style.css" />
   <link rel="stylesheet" href="brand.css" />
+  <style>.standings-toolbar label{display:flex;align-items:center;gap:9px;color:#aaa}.standings-toolbar select{background:#222;color:#fff;border:1px solid rgba(255,255,255,.15);padding:8px 10px}.promotion{box-shadow:inset 4px 0 #65c987}.relegation{box-shadow:inset 4px 0 #ef3d32}</style>
 </head>
 <body>
   <header class="site-header">
@@ -111,8 +112,11 @@
       </div>
       <div class="filter-row reveal" role="group" aria-label="Fixture division filter">
         <button class="filter active" data-division="all">All fixtures</button>
-        <button class="filter" data-division="premier">Premier</button>
+        <button class="filter" data-division="premier-division">Premier</button>
         <button class="filter" data-division="division-one">Division One</button>
+        <button class="filter" data-division="division-two">Division Two</button>
+        <button class="filter" data-division="division-three">Division Three</button>
+        <button class="filter" data-division="division-four">Division Four</button>
       </div>
       <div class="fixtures-grid">
         <article class="fixture-card reveal" data-division="premier">
@@ -142,7 +146,7 @@
       <div class="standings-shell reveal">
         <div class="standings-toolbar">
           <div><button class="tab active" data-tab="table">League table</button><button class="tab" data-tab="results">Latest results</button></div>
-          <span>Updated after match week 05</span>
+          <label>Division <select id="standings-division"><option>Premier Division</option><option>Division One</option><option>Division Two</option><option>Division Three</option><option>Division Four</option></select></label>
         </div>
         <div class="tab-panel active" id="table-panel">
           <table>
