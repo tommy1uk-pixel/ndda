@@ -228,6 +228,17 @@ export async function onRequest(context) {
       await audit(env,admin,"update_stats","player",id,payload);
       return json({ok:true});
     }
+    if (method === "PUT" && segments[1] && segments[2]) {
+      if (!canWrite(admin)) return json({ error: "Insufficient permission" }, 403);
+      const resource=segments[1],id=integer(segments[2],1),payload=await body(request);
+      if(resource==="teams") await env.DB.prepare("UPDATE teams SET name=?,division=?,venue_id=?,captain_name=?,captain_email=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(clean(payload.name,120),clean(payload.division,80),payload.venue_id?integer(payload.venue_id,1):null,clean(payload.captain_name,120),clean(payload.captain_email,254).toLowerCase(),id).run();
+      else if(resource==="venues") await env.DB.prepare("UPDATE venues SET name=?,town=?,address=?,contact_name=?,contact_email=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(clean(payload.name,120),clean(payload.town,120),clean(payload.address,300),clean(payload.contact_name,120),clean(payload.contact_email,254).toLowerCase(),id).run();
+      else if(resource==="players") await env.DB.prepare("UPDATE players SET name=?,email=?,team_id=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(clean(payload.name,120),clean(payload.email,254).toLowerCase(),payload.team_id?integer(payload.team_id,1):null,id).run();
+      else if(resource==="fixtures") await env.DB.prepare("UPDATE fixtures SET home_team_id=?,away_team_id=?,venue_id=?,starts_at=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(integer(payload.home_team_id,1),integer(payload.away_team_id,1),payload.venue_id?integer(payload.venue_id,1):null,clean(payload.starts_at,40),id).run();
+      else if(resource==="calendar-events") await env.DB.prepare("UPDATE calendar_events SET title=?,event_type=?,starts_at=?,location_text=?,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(clean(payload.title,160),clean(payload.event_type,30),clean(payload.starts_at,40),clean(payload.location_text,200),id).run();
+      else return json({error:"Unsupported resource"},422);
+      await audit(env,admin,"edit",resource,id);return json({ok:true});
+    }
     if (method === "POST" && segments[1] === "generate-fixtures") {
       if (!canWrite(admin)) return json({ error: "Insufficient permission" }, 403);
       const generated = await generateFixtures(await body(request), env, admin);
