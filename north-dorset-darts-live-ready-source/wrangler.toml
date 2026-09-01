@@ -5,7 +5,7 @@ pages_build_output_dir = "."
 [[d1_databases]]
 binding = "DB"
 database_name = "north-dorset-darts-league"
-database_id = "REPLACE_WITH_D1_DATABASE_ID"
+database_id = "da1254ce-badb-49ac-84b1-8ec82b02139a"
 migrations_dir = "migrations"
 
 [vars]
