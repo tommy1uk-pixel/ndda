@@ -1,0 +1,44 @@
+<!doctype html><html lang="en"><head><meta charset="UTF-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>League Office · North Dorset Darts League</title><link rel="preconnect" href="https://fonts.googleapis.com"><link rel="preconnect" href="https://fonts.gstatic.com" crossorigin><link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet"><link rel="stylesheet" href="admin.css"></head><body>
+  <aside class="sidebar">
+    <a class="office-brand" href="index.html"><img src="crest.png" alt="North Dorset Darts League crest"><span>North Dorset<strong>League Office</strong></span></a>
+    <nav id="admin-nav">
+      <button class="active" data-view="overview"><span>⌂</span> Overview</button>
+      <button data-view="applications"><span>◎</span> Applications <b id="application-badge">0</b></button>
+      <button data-view="teams"><span>◇</span> Teams & clubs</button>
+      <button data-view="venues"><span>⌖</span> Venues</button>
+      <button data-view="players"><span>♙</span> Players</button>
+      <button data-view="fixtures"><span>▦</span> Fixtures</button>
+      <button data-view="results"><span>✓</span> Results</button>
+      <button data-view="statistics"><span>↗</span> Statistics</button>
+      <button data-view="rules"><span>§</span> Rules & documents</button>
+    </nav>
+    <div class="sidebar-foot"><span>Local prototype</span><a href="index.html">View public website ↗</a></div>
+  </aside>
+
+  <main class="office-main">
+    <header class="office-header"><button class="mobile-menu" aria-label="Toggle menu">☰</button><div><span>2026/27 season</span><strong>Committee workspace</strong></div><div class="user"><i>TC</i><span>League administrator<small>Local access</small></span></div></header>
+    <div class="prototype-banner" id="system-banner"><strong>Secure League Office</strong> Connecting to the shared league database…</div>
+
+    <section class="view active" id="overview-view">
+      <div class="view-heading"><div><p>League control centre</p><h1>Good morning.</h1><span>Here’s what needs your attention across the league.</span></div><button class="primary" data-open="quick-action">+ Add record</button></div>
+      <div class="metric-grid"><article><span>Registered teams</span><strong id="metric-teams">4</strong><small>Across 2 divisions</small></article><article><span>Active players</span><strong id="metric-players">32</strong><small>All registrations</small></article><article><span>Fixtures played</span><strong id="metric-fixtures">6</strong><small>12 still scheduled</small></article><article class="attention"><span>Needs attention</span><strong id="metric-attention">0</strong><small>New applications</small></article></div>
+      <div class="dashboard-grid">
+        <article class="panel"><div class="panel-title"><div><span>Actions</span><h2>League workflow</h2></div></div><div class="action-list"><button data-view-jump="applications"><i>01</i><span><strong>Review new applications</strong><small>Players, teams and venues awaiting response</small></span><b>→</b></button><button data-view-jump="results"><i>02</i><span><strong>Enter match results</strong><small>Record scores and update the table</small></span><b>→</b></button><button data-view-jump="fixtures"><i>03</i><span><strong>Schedule fixtures</strong><small>Create or amend match nights</small></span><b>→</b></button></div></article>
+        <article class="panel"><div class="panel-title"><div><span>Next up</span><h2>Thursday 18 September</h2></div><button data-view-jump="fixtures">View all</button></div><div class="mini-fixtures"><p><span>The Bull & Barrel</span><b>20:00</b><span>Sturminster Arrows</span></p><p><span>Gillingham Flights</span><b>20:00</b><span>Blandford 180</span></p><p><span>Blackmore Vale</span><b>20:00</b><span>Sherborne Doubles</span></p></div></article>
+      </div>
+    </section>
+
+    <section class="view" id="applications-view"><div class="view-heading"><div><p>Registration inbox</p><h1>Applications</h1><span>Review and progress enquiries submitted through the public site.</span></div></div><div class="toolbar"><input id="application-search" placeholder="Search applications"><select id="application-filter"><option>All statuses</option><option>New</option><option>Contacted</option><option>Approved</option><option>Declined</option></select></div><div class="panel table-panel"><table><thead><tr><th>Name</th><th>Type</th><th>Town</th><th>Received</th><th>Status</th><th></th></tr></thead><tbody id="applications-body"></tbody></table><div class="empty" id="applications-empty"><strong>No applications yet</strong><span>Submit the public join form to see an application appear here.</span></div></div></section>
+
+    <section class="view" id="teams-view"><div class="view-heading"><div><p>League membership</p><h1>Teams & clubs</h1><span>Manage teams, home venues, divisions and captain details.</span></div><button class="primary" data-open="team">+ Add team</button></div><div class="cards-list" id="teams-list"></div></section>
+    <section class="view" id="venues-view"><div class="view-heading"><div><p>League locations</p><h1>Venues</h1><span>Manage home venues, towns and committee contact details.</span></div><button class="primary" data-open="venue">+ Add venue</button></div><div class="cards-list" id="venues-list"></div></section>
+    <section class="view" id="players-view"><div class="view-heading"><div><p>Player registration</p><h1>Players</h1><span>Maintain player records, team registrations and eligibility.</span></div><button class="primary" data-open="player">+ Add player</button></div><div class="panel table-panel"><table><thead><tr><th>Player</th><th>Team</th><th>Status</th><th>Played</th><th>Won</th><th>Checkout</th></tr></thead><tbody id="players-body"></tbody></table></div></section>
+    <section class="view" id="fixtures-view"><div class="view-heading"><div><p>Season calendar</p><h1>Fixtures</h1><span>Schedule matches, assign venues and manage postponements.</span></div><button class="primary" data-open="fixture">+ New fixture</button></div><div class="cards-list" id="fixtures-list"></div></section>
+    <section class="view" id="results-view"><div class="view-heading"><div><p>Match administration</p><h1>Results</h1><span>Enter verified scores and publish league-table updates.</span></div><button class="primary" data-open="result">+ Enter result</button></div><div class="cards-list" id="results-list"></div></section>
+    <section class="view" id="statistics-view"><div class="view-heading"><div><p>Performance centre</p><h1>Individual statistics</h1><span>Track each player’s appearances, wins, 180s and highest checkout.</span></div><button class="primary" data-open="stat">+ Record player stats</button></div><div class="metric-grid"><article><span>180s recorded</span><strong id="stat-180s">12</strong><small>This season</small></article><article><span>Highest checkout</span><strong id="stat-checkout">146</strong><small>League best</small></article><article><span>Matches entered</span><strong id="stat-matches">6</strong><small>Verified results</small></article><article><span>Playing format</span><strong>DIDO</strong><small>Double-in, double-out</small></article></div><div class="panel table-panel"><table><thead><tr><th>Player</th><th>Team</th><th>Played</th><th>Won</th><th>180s</th><th>Highest checkout</th></tr></thead><tbody id="stats-body"></tbody></table></div></section>
+    <section class="view" id="rules-view"><div class="view-heading"><div><p>Governance</p><h1>Rules & documents</h1><span>Maintain the official handbook, forms and committee policies.</span></div><button class="primary" id="publish-rules">Publish rules</button></div><div class="cards-list"><article class="record-card"><div><span class="tag gold">Draft</span><h3>League rules 2026/27</h3><p>Eligibility, match format, scoring, results, postponements, conduct and disputes.</p></div><button>Edit document</button></article><article class="record-card"><div><span class="tag">Template</span><h3>Match result sheet</h3><p>Captain verification, individual results and match totals.</p></div><button>Download</button></article><article class="record-card"><div><span class="tag">Policy</span><h3>Conduct & disciplinary process</h3><p>Reporting, evidence, hearings, sanctions and appeals.</p></div><button>Edit document</button></article></div></section>
+  </main>
+
+  <dialog id="record-dialog"><form method="dialog" id="record-form"><header><div><span>League office</span><h2 id="dialog-title">Add record</h2></div><button value="cancel" aria-label="Close">×</button></header><div id="dialog-fields"></div><footer><button value="cancel">Cancel</button><button class="primary" value="default" id="save-record">Save record</button></footer></form></dialog>
+  <script src="admin-live.js"></script>
+</body></html>

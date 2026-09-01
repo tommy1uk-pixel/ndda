@@ -1,0 +1,13 @@
+name = "north-dorset-darts-league"
+compatibility_date = "2026-08-01"
+pages_build_output_dir = "."
+
+[[d1_databases]]
+binding = "DB"
+database_name = "north-dorset-darts-league"
+database_id = "REPLACE_WITH_D1_DATABASE_ID"
+migrations_dir = "migrations"
+
+[vars]
+ENVIRONMENT = "production"
+# Set BOOTSTRAP_ADMIN_EMAILS securely in Cloudflare before first use.

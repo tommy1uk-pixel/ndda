@@ -1,0 +1,22 @@
+:root{--ink:#07162f;--paper:#f4f6f8;--red:#c6a454;--lime:#c5cbd3;--muted:#9da8b6;--line:rgba(255,255,255,.18)}
+body{background:#07162f;color:#fff}
+.site-header{height:98px;background:linear-gradient(180deg,rgba(4,15,35,.96),rgba(4,15,35,.72));border-bottom-color:rgba(198,164,84,.4)}
+.brand{gap:14px;color:white;letter-spacing:.12em}.brand strong{color:#d4bb79;font-size:17px}.brand small{display:block;color:#aeb7c4;font:500 8px/1.5 var(--body);letter-spacing:.2em;margin-top:4px}
+.crest{width:70px;height:82px;object-fit:contain;filter:drop-shadow(0 4px 10px rgba(0,0,0,.28))}
+.nav-cta{background:#c6a454;color:#07162f}.nav-cta span{color:#07162f}
+.hero{background:radial-gradient(circle at 79% 45%,rgba(198,164,84,.18),transparent 18%),radial-gradient(circle at 75% 48%,transparent 0 150px,rgba(197,203,211,.09) 152px 154px,transparent 156px 210px,rgba(198,164,84,.08) 212px 214px,transparent 216px),linear-gradient(118deg,#041027 25%,#0b2343 70%,#07162f 100%)}
+.hero:before{opacity:.12;background-image:repeating-linear-gradient(90deg,transparent 0 99px,rgba(198,164,84,.16) 100px),repeating-linear-gradient(0deg,transparent 0 99px,rgba(255,255,255,.05) 100px)}
+.hero-glow{background:#d8bf7a;box-shadow:0 0 0 14px rgba(198,164,84,.07),0 0 50px 8px rgba(198,164,84,.4)}
+h1 em,h2 em{color:#d4b76f}.button-primary{background:#c6a454;color:#07162f}.button-primary:hover{background:#d8bc75}
+.match-card{background:rgba(5,18,42,.88);border-color:rgba(198,164,84,.35);box-shadow:0 24px 70px rgba(0,0,0,.28)}.card-topline i{color:#d9dfe6}
+.ticker{background:#c6a454;color:#07162f;border-top:1px solid #e3cc91;border-bottom:1px solid #9e803c}.ticker i{background:#07162f}
+.fixtures-section{background:#f4f6f8}.fixture-card{background:white;border-color:#d6dae0;box-shadow:0 8px 24px rgba(7,22,47,.05)}
+.standings-section{background:#07162f}.standings-shell{background:#0a1d3a;border-color:rgba(198,164,84,.28)}.tab.active{background:#c6a454;color:#07162f}
+.league-section{background:#dce1e7}.league-copy h2 em{-webkit-text-stroke-color:#07162f}.join-section{background:#f4f6f8}.join-form{box-shadow:18px 18px 0 #c6a454}.interest.active,.interest:hover{background:#07162f;border-color:#07162f}
+footer{background:#041027;border-top-color:rgba(198,164,84,.35)}.mobile-actions{background:#041027;border-top-color:#c6a454}
+.rules-section{background:#fff;color:#07162f}.rules-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}.rule-card{min-height:250px;padding:28px;border:1px solid #d9dee5;background:#f7f8fa;transition:.25s transform,.25s border-color}.rule-card:hover{transform:translateY(-5px);border-color:#c6a454}.rule-card>span{color:#c6a454;font:700 13px var(--display);letter-spacing:.15em}.rule-card h3{font:700 30px var(--display);text-transform:uppercase;margin:35px 0 10px}.rule-card p{color:#667283;font-size:13px}.rules-notice{display:grid;grid-template-columns:170px 1fr;gap:25px;margin-top:22px;padding:22px;border-left:4px solid #c6a454;background:#eef1f5;font-size:12px}.rules-notice strong{text-transform:uppercase;letter-spacing:.12em;color:#07162f}.rules-notice span{color:#596574}
+.player-stats-section{background:#e3e7ec;color:#07162f}.player-stat-highlights{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:18px}.player-stat-highlights article{background:#07162f;color:white;padding:24px;border-top:4px solid #c6a454}.player-stat-highlights span{display:block;color:#aeb8c5;text-transform:uppercase;letter-spacing:.13em;font-size:10px}.player-stat-highlights strong{display:block;color:#d8bc75;font:800 58px var(--display);line-height:1;margin:12px 0 5px}.player-stat-highlights small{color:#d5dbe2}.public-stats-table{overflow-x:auto;background:white;border:1px solid #d3d8df}.public-stats-table table{min-width:750px}.public-stats-table th{color:#6f7b8a}.public-stats-table td,.public-stats-table th{border-bottom-color:#e0e4e9}.public-stats-table tbody tr:first-child td:first-child b{background:#c6a454;color:#07162f}
+@media(max-width:900px){.rules-grid{grid-template-columns:repeat(2,1fr)}}
+@media(max-width:760px){.player-stat-highlights{grid-template-columns:1fr}}
+@media(max-width:560px){.rules-grid{grid-template-columns:1fr}.rules-notice{grid-template-columns:1fr}.rule-card{min-height:0}}
+@media(max-width:900px){.site-header nav{background:#061630}.crest{width:58px;height:68px}.site-header{height:88px}.hero{padding-top:140px}}
