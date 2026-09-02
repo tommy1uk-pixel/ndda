@@ -58,7 +58,8 @@ async function currentAdmin(request, env) {
   return env.DB.prepare("SELECT email, display_name, role FROM admins WHERE email = ? AND active = 1").bind(email).first();
 }
 
-const canWrite = admin => admin && ["administrator", "results_secretary"].includes(admin.role);
+const canWrite = admin => admin?.role === "administrator";
+const canEnterResults = admin => admin && ["administrator", "results_secretary"].includes(admin.role);
 const canAdminister = admin => admin?.role === "administrator";
 
 async function audit(env, admin, action, entityType, entityId, detail = null) {
@@ -241,8 +242,15 @@ export async function onRequest(context) {
     if (!admin) return json({ error: "Authentication required" }, 401);
     if(method==="GET"&&segments[1]==="export"){if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const exported=await exportLeague(new URL(request.url).searchParams.get('type')||'',env);return exported||json({error:"Unknown export type"},422)}
     if(method==="GET"&&segments[1]==="activity"){if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const rows=await env.DB.prepare("SELECT id,actor_email,action,entity_type,entity_id,detail,created_at FROM audit_log ORDER BY created_at DESC,id DESC LIMIT 250").all();return json({activity:rows.results})}
+    if(method==="GET"&&segments[1]==="committee-accounts"){if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const rows=await env.DB.prepare("SELECT id,email,display_name,role,active,created_at,updated_at FROM admins WHERE active=1 ORDER BY role,email").all(),accounts=rows.results;if(!accounts.some(x=>x.email.toLowerCase()===admin.email.toLowerCase()))accounts.unshift({id:null,email:admin.email,display_name:admin.display_name,role:admin.role,active:1,created_at:null});return json({accounts,current_email:admin.email})}
     if (method === "GET" && segments[1] === "bootstrap") return json({ user: admin, ...(await bootstrap(env)) });
     if (!sameOrigin(request)) return json({ error: "Invalid origin" }, 403);
+    if(method==="POST"&&segments[1]==="committee-accounts"){
+      if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const payload=await body(request),email=clean(payload.email,254).toLowerCase(),name=clean(payload.display_name,120),role=clean(payload.role,30);if(!email.includes('@'))return json({error:"Enter a valid email address"},422);if(!['administrator','results_secretary'].includes(role))return json({error:"Select a valid account role"},422);await env.DB.prepare("INSERT INTO admins (email,display_name,role,active) VALUES (?,?,?,1) ON CONFLICT(email) DO UPDATE SET display_name=excluded.display_name,role=excluded.role,active=1,updated_at=CURRENT_TIMESTAMP").bind(email,name,role).run();await audit(env,admin,"grant_access","admin",email,{role,display_name:name});return json({ok:true},201)
+    }
+    if(method==="DELETE"&&segments[1]==="committee-accounts"&&segments[2]){
+      if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const id=integer(segments[2],1),account=await env.DB.prepare("SELECT email FROM admins WHERE id=?").bind(id).first();if(!account)return json({error:"Account not found"},404);if(account.email.toLowerCase()===admin.email.toLowerCase())return json({error:"You cannot remove your own account"},422);await env.DB.prepare("UPDATE admins SET active=0,updated_at=CURRENT_TIMESTAMP WHERE id=?").bind(id).run();await audit(env,admin,"remove_access","admin",account.email);return json({ok:true})
+    }
     if (method === "PATCH" && segments[1] === "applications" && segments[2]) {
       if (!canWrite(admin)) return json({ error: "Insufficient permission" }, 403);
       const payload = await body(request), status = clean(payload.status,20);
@@ -285,9 +293,9 @@ export async function onRequest(context) {
       const [games,players]=await Promise.all([env.DB.prepare("SELECT * FROM match_games WHERE scorecard_id=? ORDER BY game_number").bind(card.id).all(),env.DB.prepare("SELECT * FROM match_player_stats WHERE scorecard_id=? ORDER BY id").bind(card.id).all()]);
       return json({scorecard:card,games:games.results,players:players.results});
     }
-    if(method==="POST"&&segments[1]==="scorecards"){if(!canWrite(admin))return json({error:"Insufficient permission"},403);return json({ok:true,...await saveScorecard(await body(request),env,admin)},201)}
+    if(method==="POST"&&segments[1]==="scorecards"){if(!canEnterResults(admin))return json({error:"Insufficient permission"},403);return json({ok:true,...await saveScorecard(await body(request),env,admin)},201)}
     if (method === "POST" && segments[1]) {
-      if (!canWrite(admin)) return json({ error: "Insufficient permission" }, 403);
+      if (!(segments[1]==="results"?canEnterResults(admin):canWrite(admin))) return json({ error: "Insufficient permission" }, 403);
       const payload = await body(request), id = await createRecord(segments[1],payload,env,admin);
       await audit(env,admin,"create",segments[1],id);
       return json({ ok:true,id },201);
