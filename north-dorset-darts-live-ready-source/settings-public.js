@@ -1,0 +1,1 @@
+fetch('/api/public/settings').then(response=>response.json()).then(settings=>{document.querySelectorAll('[data-season-label]').forEach(item=>item.textContent=settings.current_season||'2026/27')}).catch(()=>{});
