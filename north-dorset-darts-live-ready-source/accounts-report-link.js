@@ -1,0 +1,1 @@
+const accountsLink=document.createElement('a');accountsLink.href='accounts-report.html';accountsLink.target='_blank';accountsLink.className='primary';accountsLink.textContent='Print accounts statement';accountsLink.style.textDecoration='none';accountsLink.style.padding='10px 13px';document.querySelector('.expense-heading').append(accountsLink);
