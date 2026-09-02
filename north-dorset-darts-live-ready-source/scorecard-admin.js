@@ -3,7 +3,7 @@ const sf=document.querySelector('#score-fixture'),homeBox=document.querySelector
 const opt=items=>items.map(x=>`<option value="${x.id}">${x.name}</option>`).join('');
 const playerName=id=>(scoreData.players.find(x=>x.id===Number(id))||{}).name||'Unknown player';
 
-async function scoreLoad(){const response=await fetch('/api/admin/bootstrap'),data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to load fixtures');scoreData=data;sf.innerHTML='<option value="">Select fixture…</option>'+data.fixtures.map(x=>`<option value="${x.id}">${x.home_team} v ${x.away_team} · ${new Date(x.starts_at).toLocaleDateString('en-GB')} (${x.status})</option>`).join('');if(!data.fixtures.length)sf.innerHTML='<option value="">No fixtures have been created yet</option>'}
+async function scoreLoad(){const response=await fetch('/api/admin/bootstrap'),data=await response.json();if(!response.ok)throw new Error(data.error||'Unable to load fixtures');scoreData=data;const usable=data.fixtures.filter(x=>['scheduled','completed'].includes(x.status));sf.innerHTML='<option value="">Select fixture…</option>'+usable.map(x=>`<option value="${x.id}">${x.home_team} v ${x.away_team} · ${new Date(x.starts_at).toLocaleDateString('en-GB')} (${x.status})</option>`).join('');if(!usable.length)sf.innerHTML='<option value="">No available fixtures</option>'}
 function selectedPlayers(box){return [...box.querySelectorAll('select')].map(x=>Number(x.value))}
 function setSelections(box,ids){[...box.querySelectorAll('select')].forEach((select,i)=>{if(ids[i])select.value=String(ids[i])})}
 
