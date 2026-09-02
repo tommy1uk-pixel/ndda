@@ -201,6 +201,12 @@
         <label>Full name<input name="name" autocomplete="name" required placeholder="Your name" /></label>
         <label>Email address<input name="email" type="email" autocomplete="email" required placeholder="you@example.com" /></label>
         <label>Town<input name="town" autocomplete="address-level2" required placeholder="Where are you based?" /></label>
+        <div class="team-application-fields" id="team-application-fields" hidden>
+          <label>Team name<input name="team_name" placeholder="Your team name" /></label>
+          <label>Home venue<input name="venue_name" placeholder="Pub, club or venue name" /></label>
+          <label class="full-field">Venue address<input name="venue_address" autocomplete="street-address" placeholder="Full venue address" /></label>
+          <fieldset class="application-players full-field"><legend>Players</legend><p>Add everyone you currently expect to register. You can add more players later.</p><div id="application-player-list"></div><button type="button" class="add-player-row" id="add-player-row">+ Add another player</button></fieldset>
+        </div>
         <label>Anything we should know?<textarea name="message" rows="3" placeholder="Optional"></textarea></label>
         <button class="button button-primary" type="submit">Register my interest <span>→</span></button>
         <small>No commitment. We’ll simply contact you with the most relevant next step.</small>
