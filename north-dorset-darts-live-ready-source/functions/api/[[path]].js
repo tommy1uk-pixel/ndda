@@ -240,6 +240,7 @@ export async function onRequest(context) {
     const admin = await currentAdmin(request, env);
     if (!admin) return json({ error: "Authentication required" }, 401);
     if(method==="GET"&&segments[1]==="export"){if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const exported=await exportLeague(new URL(request.url).searchParams.get('type')||'',env);return exported||json({error:"Unknown export type"},422)}
+    if(method==="GET"&&segments[1]==="activity"){if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const rows=await env.DB.prepare("SELECT id,actor_email,action,entity_type,entity_id,detail,created_at FROM audit_log ORDER BY created_at DESC,id DESC LIMIT 250").all();return json({activity:rows.results})}
     if (method === "GET" && segments[1] === "bootstrap") return json({ user: admin, ...(await bootstrap(env)) });
     if (!sameOrigin(request)) return json({ error: "Invalid origin" }, 403);
     if (method === "PATCH" && segments[1] === "applications" && segments[2]) {
