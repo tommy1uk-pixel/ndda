@@ -89,13 +89,22 @@ async function bootstrap(env) {
 async function publicLeague(env) {
   const [fixtures, results, players, teams, cups, events] = await Promise.all([
     env.DB.prepare("SELECT f.id, f.starts_at, f.competition, f.round_name, ht.name AS home_team, at.name AS away_team, ht.division, v.name AS venue_name, v.town FROM fixtures f JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id LEFT JOIN venues v ON v.id=f.venue_id WHERE f.status='scheduled' AND f.starts_at >= datetime('now') ORDER BY f.starts_at LIMIT 100").all(),
-    env.DB.prepare("SELECT f.starts_at, ht.name AS home_team, at.name AS away_team, ht.division, r.home_score, r.away_score FROM results r JOIN fixtures f ON f.id=r.fixture_id JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id WHERE r.published=1 ORDER BY f.starts_at DESC LIMIT 100").all(),
+    env.DB.prepare("SELECT f.id AS fixture_id, f.starts_at, f.competition, f.round_name, ht.name AS home_team, at.name AS away_team, ht.division, r.home_score, r.away_score FROM results r JOIN fixtures f ON f.id=r.fixture_id JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id WHERE r.published=1 ORDER BY f.starts_at DESC LIMIT 100").all(),
     env.DB.prepare("SELECT p.name, t.name AS team_name, t.division, p.appearances, p.wins, p.one_eighties, p.highest_checkout, p.highest_shot_in FROM players p LEFT JOIN teams t ON t.id=p.team_id WHERE p.registration_status='registered' ORDER BY p.wins DESC, p.one_eighties DESC, p.highest_checkout DESC, p.name LIMIT 250").all(),
     env.DB.prepare("SELECT id, name, division FROM teams WHERE active=1 ORDER BY division, name").all(),
     env.DB.prepare("SELECT c.division,c.competition,c.round_number,c.round_name,c.tie_number,c.status,ht.name AS home_team,at.name AS away_team,wt.name AS winner_team,f.starts_at FROM cup_ties c LEFT JOIN teams ht ON ht.id=c.home_team_id LEFT JOIN teams at ON at.id=c.away_team_id LEFT JOIN teams wt ON wt.id=c.winner_team_id LEFT JOIN fixtures f ON f.id=c.fixture_id ORDER BY c.division,c.round_number,c.tie_number").all(),
     env.DB.prepare("SELECT e.title,e.event_type,e.starts_at,e.ends_at,COALESCE(v.name,e.location_text) AS location,e.description FROM calendar_events e LEFT JOIN venues v ON v.id=e.venue_id WHERE e.public=1 AND e.starts_at>=datetime('now','-30 days') ORDER BY e.starts_at LIMIT 100").all(),
   ]);
   return { fixtures: fixtures.results, results: results.results, players: players.results, teams: teams.results, cups:cups.results, events:events.results };
+}
+
+async function publicMatch(fixtureId,env){
+  const match=await env.DB.prepare("SELECT f.id,f.starts_at,f.competition,f.round_name,ht.name AS home_team,at.name AS away_team,r.home_score,r.away_score,bw.name AS beer_winner,ms.id AS scorecard_id FROM fixtures f JOIN results r ON r.fixture_id=f.id AND r.published=1 JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id LEFT JOIN match_scorecards ms ON ms.fixture_id=f.id AND ms.published=1 LEFT JOIN teams bw ON bw.id=ms.beer_leg_winner_team_id WHERE f.id=?").bind(fixtureId).first();
+  if(!match)return null;if(!match.scorecard_id)return{match,games:[],players:[]};
+  const [games,players]=await Promise.all([
+    env.DB.prepare("SELECT mg.game_type,mg.game_number,mg.home_legs,mg.away_legs,h1.name AS home_player_1,h2.name AS home_player_2,a1.name AS away_player_1,a2.name AS away_player_2,wt.name AS winner_team FROM match_games mg LEFT JOIN players h1 ON h1.id=mg.home_player_1_id LEFT JOIN players h2 ON h2.id=mg.home_player_2_id LEFT JOIN players a1 ON a1.id=mg.away_player_1_id LEFT JOIN players a2 ON a2.id=mg.away_player_2_id LEFT JOIN teams wt ON wt.id=mg.winner_team_id WHERE mg.scorecard_id=? ORDER BY mg.game_number").bind(match.scorecard_id).all(),
+    env.DB.prepare("SELECT p.name,t.name AS team_name,mps.singles_wins,mps.one_eighties,mps.highest_checkout,mps.highest_shot_in FROM match_player_stats mps JOIN players p ON p.id=mps.player_id LEFT JOIN teams t ON t.id=p.team_id WHERE mps.scorecard_id=? ORDER BY t.name,p.name").bind(match.scorecard_id).all()
+  ]);return{match,games:games.results,players:players.results}
 }
 
 async function createRecord(resource, payload, env, admin) {
@@ -200,6 +209,7 @@ export async function onRequest(context) {
     : String(params.path || "").split("/").filter(Boolean);
   try {
     if (method === "GET" && segments.join("/") === "public/league") return json(await publicLeague(env));
+    if(method==="GET"&&segments[0]==="public"&&segments[1]==="matches"&&segments[2]){const match=await publicMatch(integer(segments[2],1),env);return match?json(match):json({error:"Published match not found"},404)}
     if (method === "POST" && segments.join("/") === "applications") {
       if (!sameOrigin(request)) return json({ error: "Invalid origin" }, 403);
       const payload = await body(request);
