@@ -73,7 +73,7 @@ async function body(request) {
 }
 
 async function bootstrap(env) {
-  const [applications, teams, players, fixtures, results, venues, cups, events] = await Promise.all([
+  const [applications, teams, players, fixtures, results, venues, cups, events, notices] = await Promise.all([
     env.DB.prepare("SELECT * FROM applications ORDER BY created_at DESC LIMIT 250").all(),
     env.DB.prepare("SELECT t.*, v.name AS venue_name, v.town AS venue_town FROM teams t LEFT JOIN venues v ON v.id=t.venue_id WHERE t.active=1 ORDER BY t.name").all(),
     env.DB.prepare("SELECT p.*, t.name AS team_name FROM players p LEFT JOIN teams t ON t.id=p.team_id WHERE p.registration_status<>'inactive' ORDER BY p.name").all(),
@@ -82,20 +82,22 @@ async function bootstrap(env) {
     env.DB.prepare("SELECT * FROM venues WHERE active=1 ORDER BY name").all(),
     env.DB.prepare("SELECT c.*, ht.name AS home_team, at.name AS away_team, wt.name AS winner_team FROM cup_ties c LEFT JOIN teams ht ON ht.id=c.home_team_id LEFT JOIN teams at ON at.id=c.away_team_id LEFT JOIN teams wt ON wt.id=c.winner_team_id ORDER BY c.division, c.round_number, c.tie_number").all(),
     env.DB.prepare("SELECT e.*, v.name AS venue_name FROM calendar_events e LEFT JOIN venues v ON v.id=e.venue_id ORDER BY e.starts_at").all(),
+    env.DB.prepare("SELECT * FROM league_notices ORDER BY published_at DESC,id DESC").all(),
   ]);
-  return { applications: applications.results, teams: teams.results, players: players.results, fixtures: fixtures.results, results: results.results, venues: venues.results, cups:cups.results, events:events.results };
+  return { applications: applications.results, teams: teams.results, players: players.results, fixtures: fixtures.results, results: results.results, venues: venues.results, cups:cups.results, events:events.results, notices:notices.results };
 }
 
 async function publicLeague(env) {
-  const [fixtures, results, players, teams, cups, events] = await Promise.all([
+  const [fixtures, results, players, teams, cups, events, notices] = await Promise.all([
     env.DB.prepare("SELECT f.id, f.starts_at, f.competition, f.round_name, ht.name AS home_team, at.name AS away_team, ht.division, v.name AS venue_name, v.town FROM fixtures f JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id LEFT JOIN venues v ON v.id=f.venue_id WHERE f.status='scheduled' AND f.starts_at >= datetime('now') ORDER BY f.starts_at LIMIT 100").all(),
     env.DB.prepare("SELECT f.id AS fixture_id, f.starts_at, f.competition, f.round_name, ht.name AS home_team, at.name AS away_team, ht.division, r.home_score, r.away_score FROM results r JOIN fixtures f ON f.id=r.fixture_id JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id WHERE r.published=1 ORDER BY f.starts_at DESC LIMIT 100").all(),
     env.DB.prepare("SELECT p.name, t.name AS team_name, t.division, p.appearances, p.wins, p.one_eighties, p.highest_checkout, p.highest_shot_in FROM players p LEFT JOIN teams t ON t.id=p.team_id WHERE p.registration_status='registered' ORDER BY p.wins DESC, p.one_eighties DESC, p.highest_checkout DESC, p.name LIMIT 250").all(),
     env.DB.prepare("SELECT t.id,t.name,t.division,v.name AS venue_name,v.town,v.address FROM teams t LEFT JOIN venues v ON v.id=t.venue_id WHERE t.active=1 ORDER BY t.division,t.name").all(),
     env.DB.prepare("SELECT c.division,c.competition,c.round_number,c.round_name,c.tie_number,c.status,ht.name AS home_team,at.name AS away_team,wt.name AS winner_team,f.starts_at FROM cup_ties c LEFT JOIN teams ht ON ht.id=c.home_team_id LEFT JOIN teams at ON at.id=c.away_team_id LEFT JOIN teams wt ON wt.id=c.winner_team_id LEFT JOIN fixtures f ON f.id=c.fixture_id ORDER BY c.division,c.round_number,c.tie_number").all(),
     env.DB.prepare("SELECT e.title,e.event_type,e.starts_at,e.ends_at,COALESCE(v.name,e.location_text) AS location,e.description FROM calendar_events e LEFT JOIN venues v ON v.id=e.venue_id WHERE e.public=1 AND e.starts_at>=datetime('now','-30 days') ORDER BY e.starts_at LIMIT 100").all(),
+    env.DB.prepare("SELECT id,title,body,priority,published_at,expires_at FROM league_notices WHERE published=1 AND (expires_at IS NULL OR expires_at='' OR expires_at>=datetime('now')) ORDER BY CASE priority WHEN 'urgent' THEN 1 WHEN 'important' THEN 2 ELSE 3 END,published_at DESC LIMIT 20").all(),
   ]);
-  return { fixtures: fixtures.results, results: results.results, players: players.results, teams: teams.results, cups:cups.results, events:events.results };
+  return { fixtures: fixtures.results, results: results.results, players: players.results, teams: teams.results, cups:cups.results, events:events.results, notices:notices.results };
 }
 
 async function publicMatch(fixtureId,env){
@@ -144,6 +146,11 @@ async function createRecord(resource, payload, env, admin) {
   }
   if (resource === "calendar-events") {
     const result = await env.DB.prepare("INSERT INTO calendar_events (title,event_type,starts_at,ends_at,venue_id,location_text,description,public) VALUES (?,?,?,?,?,?,?,?)").bind(clean(payload.title,160),clean(payload.event_type,30),clean(payload.starts_at,40),clean(payload.ends_at,40)||null,payload.venue_id?integer(payload.venue_id,1):null,clean(payload.location_text,200),clean(payload.description,1000),payload.public===false?0:1).run();
+    return result.meta.last_row_id;
+  }
+  if(resource==="notices"){
+    const priority=["normal","important","urgent"].includes(payload.priority)?payload.priority:"normal";
+    const result=await env.DB.prepare("INSERT INTO league_notices (title,body,priority,published,expires_at) VALUES (?,?,?,?,?)").bind(clean(payload.title,160),clean(payload.body,3000),priority,payload.published===false?0:1,clean(payload.expires_at,40)||null).run();
     return result.meta.last_row_id;
   }
   throw new Error("Unsupported resource");
@@ -282,6 +289,7 @@ export async function onRequest(context) {
       else if (resource === "fixtures") await env.DB.prepare("DELETE FROM fixtures WHERE id=?").bind(id).run();
       else if (resource === "results") await env.DB.prepare("DELETE FROM results WHERE id=?").bind(id).run();
       else if (resource === "calendar-events") await env.DB.prepare("DELETE FROM calendar_events WHERE id=?").bind(id).run();
+      else if (resource === "notices") await env.DB.prepare("DELETE FROM league_notices WHERE id=?").bind(id).run();
       else if (resource === "cup-ties") {
         const tie = await env.DB.prepare("SELECT fixture_id FROM cup_ties WHERE id=?").bind(id).first();
         if (!tie) return json({ error:"Cup game not found" },404);
