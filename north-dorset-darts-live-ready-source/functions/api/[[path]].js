@@ -257,6 +257,7 @@ export async function onRequest(context) {
     if (method === "GET" && segments.join("/") === "public/league") return json(await publicLeague(env));
     if(method==="GET"&&segments.join("/")==="public/settings")return json(await settings(env));
     if(method==="GET"&&segments.join("/")==="public/sponsors"){const rows=await env.DB.prepare("SELECT id,name,website_url,logo_url FROM sponsors WHERE active=1 ORDER BY display_order,name").all();return json({sponsors:rows.results})}
+    if(method==="GET"&&segments.join("/")==="public/individual-competitions"){const bundle=await competitionBundle(env);return json({competitions:bundle.competitions})}
     if(method==="GET"&&segments.join("/")==="public/seasons"){const rows=await env.DB.prepare("SELECT id,season_name,archived_at FROM season_archives ORDER BY archived_at DESC,id DESC").all();return json({seasons:rows.results})}
     if(method==="GET"&&segments[0]==="public"&&segments[1]==="seasons"&&segments[2]){const row=await env.DB.prepare("SELECT id,season_name,snapshot,archived_at FROM season_archives WHERE id=?").bind(integer(segments[2],1)).first();return row?json(publicSeasonArchive(row)):json({error:"Season not found"},404)}
     if(method==="GET"&&segments[0]==="public"&&segments[1]==="matches"&&segments[2]){const match=await publicMatch(integer(segments[2],1),env);return match?json(match):json({error:"Published match not found"},404)}
