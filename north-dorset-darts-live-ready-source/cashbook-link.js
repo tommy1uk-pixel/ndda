@@ -1,0 +1,1 @@
+const cashbookLink=document.createElement('a');cashbookLink.href='cashbook.html';cashbookLink.target='_blank';cashbookLink.className='primary';cashbookLink.textContent='Open cashbook';cashbookLink.style.textDecoration='none';cashbookLink.style.padding='10px 13px';document.querySelector('.expense-heading').append(cashbookLink);
