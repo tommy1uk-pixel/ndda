@@ -109,6 +109,16 @@ async function publicMatch(fixtureId,env){
   ]);return{match,games:games.results,players:players.results}
 }
 
+const csvCell=value=>`"${String(value??'').replace(/"/g,'""')}"`;
+function csvResponse(rows,filename){const columns=rows.length?Object.keys(rows[0]):[],content='\uFEFF'+[columns.map(csvCell).join(','),...rows.map(row=>columns.map(column=>csvCell(row[column])).join(','))].join('\r\n');return new Response(content,{headers:{'content-type':'text/csv; charset=utf-8','content-disposition':`attachment; filename="${filename}"`,'cache-control':'no-store'}})}
+async function exportLeague(type,env){
+  const stamp=new Date().toISOString().slice(0,10);
+  const queries={teams:"SELECT t.id,t.name,t.division,v.name AS venue,t.captain_name,t.captain_email,t.active FROM teams t LEFT JOIN venues v ON v.id=t.venue_id ORDER BY t.division,t.name",players:"SELECT p.id,p.name,p.email,t.name AS team,p.registration_status,p.appearances,p.wins AS singles_wins,p.one_eighties,p.highest_checkout,p.highest_shot_in FROM players p LEFT JOIN teams t ON t.id=p.team_id ORDER BY t.name,p.name",fixtures:"SELECT f.id,f.starts_at,f.competition,f.round_name,ht.name AS home_team,at.name AS away_team,v.name AS venue,f.status FROM fixtures f JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id LEFT JOIN venues v ON v.id=f.venue_id ORDER BY f.starts_at",results:"SELECT f.starts_at,f.competition,f.round_name,ht.name AS home_team,r.home_score,r.away_score,at.name AS away_team,r.published,r.entered_by FROM results r JOIN fixtures f ON f.id=r.fixture_id JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id ORDER BY f.starts_at"};
+  if(queries[type]){const rows=await env.DB.prepare(queries[type]).all();return csvResponse(rows.results,`north-dorset-darts-${type}-${stamp}.csv`)}
+  if(type==='backup'){const tables=['admins','applications','venues','teams','players','fixtures','results','rules','audit_log','cup_ties','calendar_events','match_scorecards','match_games','match_player_stats','league_notices'],backup={created_at:new Date().toISOString(),tables:{}};for(const table of tables){try{const rows=await env.DB.prepare(`SELECT * FROM ${table}`).all();backup.tables[table]=rows.results}catch(error){backup.tables[table]=[]}}return new Response(JSON.stringify(backup,null,2),{headers:{'content-type':'application/json; charset=utf-8','content-disposition':`attachment; filename="north-dorset-darts-backup-${stamp}.json"`,'cache-control':'no-store'}})}
+  return null;
+}
+
 async function createRecord(resource, payload, env, admin) {
   if (resource === "venues") {
     const result = await env.DB.prepare("INSERT INTO venues (name, town, address, contact_name, contact_email) VALUES (?, ?, ?, ?, ?)")
@@ -229,6 +239,7 @@ export async function onRequest(context) {
     if (segments[0] !== "admin") return json({ error: "Not found" }, 404);
     const admin = await currentAdmin(request, env);
     if (!admin) return json({ error: "Authentication required" }, 401);
+    if(method==="GET"&&segments[1]==="export"){if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const exported=await exportLeague(new URL(request.url).searchParams.get('type')||'',env);return exported||json({error:"Unknown export type"},422)}
     if (method === "GET" && segments[1] === "bootstrap") return json({ user: admin, ...(await bootstrap(env)) });
     if (!sameOrigin(request)) return json({ error: "Invalid origin" }, 403);
     if (method === "PATCH" && segments[1] === "applications" && segments[2]) {
