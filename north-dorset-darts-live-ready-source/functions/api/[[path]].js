@@ -73,8 +73,10 @@ async function body(request) {
   return request.json();
 }
 
+async function settings(env){const rows=await env.DB.prepare("SELECT setting_key,setting_value FROM site_settings").all();return Object.fromEntries(rows.results.map(x=>[x.setting_key,x.setting_value]))}
+
 async function bootstrap(env) {
-  const [applications, teams, players, fixtures, results, venues, cups, events, notices] = await Promise.all([
+  const [applications, teams, players, fixtures, results, venues, cups, events, notices, siteSettings] = await Promise.all([
     env.DB.prepare("SELECT * FROM applications ORDER BY created_at DESC LIMIT 250").all(),
     env.DB.prepare("SELECT t.*, v.name AS venue_name, v.town AS venue_town FROM teams t LEFT JOIN venues v ON v.id=t.venue_id WHERE t.active=1 ORDER BY t.name").all(),
     env.DB.prepare("SELECT p.*, t.name AS team_name FROM players p LEFT JOIN teams t ON t.id=p.team_id WHERE p.registration_status<>'inactive' ORDER BY p.name").all(),
@@ -84,12 +86,13 @@ async function bootstrap(env) {
     env.DB.prepare("SELECT c.*, ht.name AS home_team, at.name AS away_team, wt.name AS winner_team FROM cup_ties c LEFT JOIN teams ht ON ht.id=c.home_team_id LEFT JOIN teams at ON at.id=c.away_team_id LEFT JOIN teams wt ON wt.id=c.winner_team_id ORDER BY c.division, c.round_number, c.tie_number").all(),
     env.DB.prepare("SELECT e.*, v.name AS venue_name FROM calendar_events e LEFT JOIN venues v ON v.id=e.venue_id ORDER BY e.starts_at").all(),
     env.DB.prepare("SELECT * FROM league_notices ORDER BY published_at DESC,id DESC").all(),
+    settings(env),
   ]);
-  return { applications: applications.results, teams: teams.results, players: players.results, fixtures: fixtures.results, results: results.results, venues: venues.results, cups:cups.results, events:events.results, notices:notices.results };
+  return { applications: applications.results, teams: teams.results, players: players.results, fixtures: fixtures.results, results: results.results, venues: venues.results, cups:cups.results, events:events.results, notices:notices.results, settings:siteSettings };
 }
 
 async function publicLeague(env) {
-  const [fixtures, results, players, teams, cups, events, notices] = await Promise.all([
+  const [fixtures, results, players, teams, cups, events, notices, siteSettings] = await Promise.all([
     env.DB.prepare("SELECT f.id, f.starts_at, f.status, f.competition, f.round_name, ht.name AS home_team, at.name AS away_team, ht.division, v.name AS venue_name, v.town FROM fixtures f JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id LEFT JOIN venues v ON v.id=f.venue_id WHERE f.status IN ('scheduled','postponed') AND f.starts_at >= datetime('now','-30 days') ORDER BY f.starts_at LIMIT 100").all(),
     env.DB.prepare("SELECT f.id AS fixture_id, f.starts_at, f.competition, f.round_name, ht.name AS home_team, at.name AS away_team, ht.division, r.home_score, r.away_score FROM results r JOIN fixtures f ON f.id=r.fixture_id JOIN teams ht ON ht.id=f.home_team_id JOIN teams at ON at.id=f.away_team_id WHERE r.published=1 ORDER BY f.starts_at DESC LIMIT 100").all(),
     env.DB.prepare("SELECT p.name, t.name AS team_name, t.division, p.appearances, p.wins, p.one_eighties, p.highest_checkout, p.highest_shot_in FROM players p LEFT JOIN teams t ON t.id=p.team_id WHERE p.registration_status='registered' ORDER BY p.wins DESC, p.one_eighties DESC, p.highest_checkout DESC, p.name LIMIT 250").all(),
@@ -97,8 +100,9 @@ async function publicLeague(env) {
     env.DB.prepare("SELECT c.division,c.competition,c.round_number,c.round_name,c.tie_number,c.status,ht.name AS home_team,at.name AS away_team,wt.name AS winner_team,f.starts_at FROM cup_ties c LEFT JOIN teams ht ON ht.id=c.home_team_id LEFT JOIN teams at ON at.id=c.away_team_id LEFT JOIN teams wt ON wt.id=c.winner_team_id LEFT JOIN fixtures f ON f.id=c.fixture_id ORDER BY c.division,c.round_number,c.tie_number").all(),
     env.DB.prepare("SELECT e.title,e.event_type,e.starts_at,e.ends_at,COALESCE(v.name,e.location_text) AS location,e.description FROM calendar_events e LEFT JOIN venues v ON v.id=e.venue_id WHERE e.public=1 AND e.starts_at>=datetime('now','-30 days') ORDER BY e.starts_at LIMIT 100").all(),
     env.DB.prepare("SELECT id,title,body,priority,published_at,expires_at FROM league_notices WHERE published=1 AND (expires_at IS NULL OR expires_at='' OR expires_at>=datetime('now')) ORDER BY CASE priority WHEN 'urgent' THEN 1 WHEN 'important' THEN 2 ELSE 3 END,published_at DESC LIMIT 20").all(),
+    settings(env),
   ]);
-  return { fixtures: fixtures.results, results: results.results, players: players.results, teams: teams.results, cups:cups.results, events:events.results, notices:notices.results };
+  return { fixtures: fixtures.results, results: results.results, players: players.results, teams: teams.results, cups:cups.results, events:events.results, notices:notices.results, settings:siteSettings };
 }
 
 async function publicMatch(fixtureId,env){
@@ -227,6 +231,7 @@ export async function onRequest(context) {
     : String(params.path || "").split("/").filter(Boolean);
   try {
     if (method === "GET" && segments.join("/") === "public/league") return json(await publicLeague(env));
+    if(method==="GET"&&segments.join("/")==="public/settings")return json(await settings(env));
     if(method==="GET"&&segments[0]==="public"&&segments[1]==="matches"&&segments[2]){const match=await publicMatch(integer(segments[2],1),env);return match?json(match):json({error:"Published match not found"},404)}
     if (method === "POST" && segments.join("/") === "applications") {
       if (!sameOrigin(request)) return json({ error: "Invalid origin" }, 403);
@@ -245,6 +250,9 @@ export async function onRequest(context) {
     if(method==="GET"&&segments[1]==="committee-accounts"){if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const rows=await env.DB.prepare("SELECT id,email,display_name,role,active,created_at,updated_at FROM admins WHERE active=1 ORDER BY role,email").all(),accounts=rows.results;if(!accounts.some(x=>x.email.toLowerCase()===admin.email.toLowerCase()))accounts.unshift({id:null,email:admin.email,display_name:admin.display_name,role:admin.role,active:1,created_at:null});return json({accounts,current_email:admin.email})}
     if (method === "GET" && segments[1] === "bootstrap") return json({ user: admin, ...(await bootstrap(env)) });
     if (!sameOrigin(request)) return json({ error: "Invalid origin" }, 403);
+    if(method==="PUT"&&segments[1]==="settings"){
+      if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const payload=await body(request),season=clean(payload.current_season,20),matchTime=clean(payload.default_match_time,5);if(!season)return json({error:"Enter a season name"},422);if(!/^([01]\d|2[0-3]):[0-5]\d$/.test(matchTime))return json({error:"Enter a valid match time"},422);await env.DB.batch([env.DB.prepare("INSERT INTO site_settings (setting_key,setting_value) VALUES ('current_season',?) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(season),env.DB.prepare("INSERT INTO site_settings (setting_key,setting_value) VALUES ('default_match_time',?) ON CONFLICT(setting_key) DO UPDATE SET setting_value=excluded.setting_value,updated_at=CURRENT_TIMESTAMP").bind(matchTime)]);await audit(env,admin,"update","settings","league",{current_season:season,default_match_time:matchTime});return json({ok:true})
+    }
     if(method==="POST"&&segments[1]==="committee-accounts"){
       if(!canAdminister(admin))return json({error:"Administrator permission required"},403);const payload=await body(request),email=clean(payload.email,254).toLowerCase(),name=clean(payload.display_name,120),role=clean(payload.role,30);if(!email.includes('@'))return json({error:"Enter a valid email address"},422);if(!['administrator','results_secretary'].includes(role))return json({error:"Select a valid account role"},422);await env.DB.prepare("INSERT INTO admins (email,display_name,role,active) VALUES (?,?,?,1) ON CONFLICT(email) DO UPDATE SET display_name=excluded.display_name,role=excluded.role,active=1,updated_at=CURRENT_TIMESTAMP").bind(email,name,role).run();await audit(env,admin,"grant_access","admin",email,{role,display_name:name});return json({ok:true},201)
     }
