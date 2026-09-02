@@ -1,1 +1,2 @@
 .account-help{display:grid;gap:5px;margin-bottom:16px;padding:18px 22px;border-left:4px solid var(--gold)}.account-help strong{color:var(--navy);text-transform:uppercase}.account-help span{color:var(--muted);font-size:12px}#accounts-body button{border:1px solid var(--line);background:#fff;padding:8px 11px}#accounts-body small{color:var(--muted)}
+#fixtures-list [data-fixture-status]{margin-left:auto;padding:9px 10px;border:1px solid var(--line);background:#fff;text-transform:capitalize}
