@@ -113,7 +113,8 @@ async function bootstrap(env) {
   ]);
   const applicationPlayers=await env.DB.prepare("SELECT application_id,player_name,player_email FROM application_players ORDER BY application_id,id").all();
   applications.results.forEach(application=>{application.players=applicationPlayers.results.filter(player=>player.application_id===application.id)});
-  return { applications: applications.results, teams: teams.results, players: players.results, fixtures: fixtures.results, results: results.results, venues: venues.results, cups:cups.results, events:events.results, notices:notices.results, settings:siteSettings };
+  const tableAdjustments=await env.DB.prepare("SELECT team_id,points,reason FROM table_adjustments WHERE season_name=? ORDER BY id").bind(siteSettings.current_season||'2026/27').all();
+  return { applications: applications.results, teams: teams.results, players: players.results, fixtures: fixtures.results, results: results.results, adjustments:tableAdjustments.results, venues: venues.results, cups:cups.results, events:events.results, notices:notices.results, settings:siteSettings };
 }
 
 async function publicLeague(env) {
