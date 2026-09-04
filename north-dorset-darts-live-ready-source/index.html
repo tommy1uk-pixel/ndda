@@ -13,7 +13,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Barlow+Condensed:wght@600;700;800&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="style.css" />
+  <link rel="stylesheet" href="style.css?v=20260904-2" />
   <link rel="stylesheet" href="brand.css" />
   <style>.standings-toolbar label{display:flex;align-items:center;gap:9px;color:#aaa}.standings-toolbar select{background:#222;color:#fff;border:1px solid rgba(255,255,255,.15);padding:8px 10px}.promotion{box-shadow:inset 4px 0 #65c987}.relegation{box-shadow:inset 4px 0 #ef3d32}</style>
 </head>
@@ -108,6 +108,8 @@
     <section class="ticker" aria-label="League highlights">
       <span id="ticker-results">0 results</span><i></i><span id="ticker-fixtures">0 upcoming fixtures</span><i></i><span id="ticker-teams">0 teams</span><i></i><span id="ticker-players">0 players</span>
     </section>
+
+    <section class="postponement-board" id="postponement-board" hidden aria-live="polite"><div><span>Fixture updates</span><h2>Postponed matches</h2></div><div id="postponement-list"></div></section>
 
     <section class="section fixtures-section" id="fixtures">
       <div class="section-heading reveal">
@@ -226,7 +228,7 @@
   </footer>
 
   <nav class="mobile-actions" aria-label="Quick actions"><a href="#fixtures">Fixtures</a><a href="#standings">Standings</a><a href="#join">Join</a></nav>
-  <script src="script-live.js"></script>
+  <script src="script-live.js?v=20260904-2"></script>
   <script src="competitions-public.js"></script>
   <script src="settings-public.js"></script>
   <script src="sponsors-public.js?v=20260902-1"></script>
