@@ -382,6 +382,7 @@ export async function onRequest(context) {
       await audit(env,admin,"update_status","application",segments[2],{status});
       return json({ ok:true });
     }
+    if(method==="DELETE"&&segments[1]==="applications"&&segments[2]){if(!canAdminister(admin))return json({error:'Administrator permission required'},403);const id=integer(segments[2],1),application=await env.DB.prepare("SELECT id,name,email,status,converted_resource,converted_id FROM applications WHERE id=?").bind(id).first();if(!application)return json({error:'Application not found'},404);await env.DB.batch([env.DB.prepare("DELETE FROM application_players WHERE application_id=?").bind(id),env.DB.prepare("DELETE FROM applications WHERE id=?").bind(id)]);await audit(env,admin,'delete','application',id,{name:application.name,email:application.email,status:application.status,converted_resource:application.converted_resource,converted_id:application.converted_id});return json({ok:true})}
     if(method==="PATCH"&&segments[1]==="teams"&&segments[2]&&segments[3]==="payment"){
       if(!canWrite(admin))return json({error:"Insufficient permission"},403);
       const id=integer(segments[2],1),payload=await body(request),methodName=clean(payload.payment_method,30),note=clean(payload.payment_note,500),waived=payload.waived?1:0,paidPence=integer(payload.amount_paid_pence||0,0,10000000);
