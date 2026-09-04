@@ -58,7 +58,7 @@
     <section class="view" id="accounts-view"><div class="view-heading"><div><p>Protected access</p><h1>Committee accounts</h1><span>Control who can manage the League Office and enter results.</span></div></div><div class="panel account-help"><strong>Two steps are required</strong><span>Add the same email address to your Cloudflare Access policy, then add it here with the correct League Office role.</span></div><form class="toolbar" id="account-form"><input name="display_name" placeholder="Display name" required><input name="email" type="email" placeholder="Email address" required><select name="role"><option value="results_secretary">Results secretary</option><option value="administrator">Administrator</option></select><button class="primary">Add account</button></form><div class="panel table-panel"><table><thead><tr><th>Name</th><th>Email</th><th>Role</th><th>Added</th><th></th></tr></thead><tbody id="accounts-body"></tbody></table><div class="empty" id="accounts-empty"><strong>No additional accounts</strong><span>Add a committee member using the form above.</span></div></div></section>
     <section class="view" id="settings-view">
       <div class="view-heading"><div><p>League configuration</p><h1>Season settings</h1><span>Change shared season details and preserve completed seasons.</span></div></div>
-      <form class="panel settings-form" id="settings-form"><label>Current season<input name="current_season" maxlength="20" required placeholder="2026/27"></label><label>Standard match start time<input name="default_match_time" type="time" required></label><button class="primary">Save season settings</button></form>
+      <form class="panel settings-form" id="settings-form"><label>Current season<input name="current_season" maxlength="20" required placeholder="2026/27"></label><label>Standard match start time<input name="default_match_time" type="time" required></label><label>Scorecard return deadline<input name="scorecard_return_days" type="number" min="0" max="14" required><small>Days after the fixture</small></label><button class="primary">Save season settings</button></form>
       <div class="panel season-close-panel"><div><h2>Close and archive season</h2><p>Create a permanent snapshot of the current standings, fixtures, results, player statistics and cup ties before changing to the next season.</p></div><label>Next season<input id="next-season-name" maxlength="20" placeholder="2027/28"></label><button class="primary" id="archive-season" type="button">Archive current season</button></div>
       <div class="panel new-season-panel"><div><h2>Prepare the new season</h2><p>Use this only after archiving. It removes old live fixtures, results, cup ties and calendar events, then resets player totals. Teams, players and venues are kept.</p></div><button id="start-new-season" type="button">Prepare blank season</button></div>
       <div class="panel"><h2>Season archive</h2><div id="season-archive-list" class="cards-list"><p>Open Season settings to load the archive.</p></div></div>
@@ -80,9 +80,9 @@
   <script src="role-ui.js?v=20260902-1"></script>
   <script src="fixture-status.js?v=20260904-2"></script>
   <script src="scorecard-print-link.js?v=20260904-1"></script>
-  <script src="scorecard-returns.js?v=20260904-2"></script>
+  <script src="scorecard-returns.js?v=20260904-3"></script>
   <script src="fixture-checks.js?v=20260904-2"></script>
-  <script src="settings-admin.js?v=20260902-1"></script>
+  <script src="settings-admin.js?v=20260904-2"></script>
   <script src="system-health.js?v=20260903-1"></script>
   <script src="fees-admin.js?v=20260902-1"></script>
   <script src="outlook-email.js?v=20260902-1"></script>
