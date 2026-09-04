@@ -216,21 +216,23 @@ async function generateFixtures(payload, env, admin) {
     rotation.splice(1, 0, rotation.pop());
   }
   const rounds = homeAndAway ? [...firstLeg, ...firstLeg.map(matches => matches.map(({home,away}) => ({home:away,away:home})))] : firstLeg;
+  const [venueRows,bookingRows]=await Promise.all([env.DB.prepare("SELECT id,board_count FROM venues WHERE active=1").all(),env.DB.prepare("SELECT venue_id,substr(starts_at,1,16) AS slot,COUNT(*) AS used FROM fixtures WHERE status='scheduled' AND venue_id IS NOT NULL GROUP BY venue_id,substr(starts_at,1,16)").all()]);
+  const capacities=new Map(venueRows.results.map(row=>[row.id,Number(row.board_count||1)])),occupancy=new Map(bookingRows.results.map(row=>[`${row.venue_id}|${row.slot}`,Number(row.used||0)]));let homeAwaySwaps=0,unresolvedCapacityClashes=0;
   const statements = [];
   rounds.forEach((matches, roundIndex) => {
     const date = new Date(`${startDate}T12:00:00Z`);
     const weekIndex=roundIndex<firstLeg.length?roundIndex:roundIndex+2;
     date.setUTCDate(date.getUTCDate() + weekIndex * 7);
     const startsAt = `${date.toISOString().slice(0,10)}T${startTime}:00`;
-    matches.forEach(({home,away}) => statements.push(env.DB.prepare("INSERT INTO fixtures (home_team_id, away_team_id, venue_id, starts_at, status) VALUES (?, ?, ?, ?, 'scheduled')").bind(home.id, away.id, home.venue_id || null, startsAt)));
+    matches.forEach(({home,away}) => {let host=home,visitor=away;const available=team=>!team.venue_id||(occupancy.get(`${team.venue_id}|${startsAt.slice(0,16)}`)||0)<(capacities.get(team.venue_id)||1);if(!available(host)&&available(visitor)){host=away;visitor=home;homeAwaySwaps++}if(!available(host))unresolvedCapacityClashes++;if(host.venue_id){const key=`${host.venue_id}|${startsAt.slice(0,16)}`;occupancy.set(key,(occupancy.get(key)||0)+1)}statements.push(env.DB.prepare("INSERT INTO fixtures (home_team_id, away_team_id, venue_id, starts_at, status) VALUES (?, ?, ?, ?, 'scheduled')").bind(host.id,visitor.id,host.venue_id||null,startsAt))});
   });
   const catchUpOne=new Date(`${startDate}T12:00:00Z`),cupDate=new Date(`${startDate}T12:00:00Z`),catchUpTwo=new Date(`${startDate}T12:00:00Z`);catchUpOne.setUTCDate(catchUpOne.getUTCDate()+firstLeg.length*7);cupDate.setUTCDate(cupDate.getUTCDate()+(firstLeg.length+1)*7);catchUpTwo.setUTCDate(catchUpTwo.getUTCDate()+(rounds.length+2)*7);
   statements.push(env.DB.prepare("INSERT INTO calendar_events (title,event_type,starts_at,description,public) VALUES (?,'meeting',?,'Reserved for postponed or outstanding divisional matches',1)").bind(`${division} catch-up night — first half`,`${catchUpOne.toISOString().slice(0,10)}T${startTime}:00`));
   statements.push(env.DB.prepare("INSERT INTO calendar_events (title,event_type,starts_at,description,public) VALUES (?,'meeting',?,'Reserved for postponed or outstanding divisional matches',1)").bind(`${division} catch-up night — second half`,`${catchUpTwo.toISOString().slice(0,10)}T${startTime}:00`));
   await env.DB.batch(statements);
   const cup=await generateCupRound({division,starts_at:`${cupDate.toISOString().slice(0,10)}T${startTime}:00`},env,admin);
-  await audit(env, admin, "generate", "fixtures", division, { rounds:rounds.length, fixtures:statements.length-2, startDate, startTime, homeAndAway,catch_up_nights:2,cup_round:cup.roundName });
-  return { fixtures: statements.length-2, rounds: rounds.length, catch_up_nights:2, cup_round:cup.roundName };
+  await audit(env, admin, "generate", "fixtures", division, { rounds:rounds.length, fixtures:statements.length-2, startDate, startTime, homeAndAway,catch_up_nights:2,cup_round:cup.roundName,home_away_swaps:homeAwaySwaps,unresolved_capacity_clashes:unresolvedCapacityClashes });
+  return { fixtures: statements.length-2, rounds: rounds.length, catch_up_nights:2, cup_round:cup.roundName, home_away_swaps:homeAwaySwaps, unresolved_capacity_clashes:unresolvedCapacityClashes };
 }
 
 async function generateCupRound(payload, env, admin) {
