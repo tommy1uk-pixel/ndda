@@ -205,7 +205,8 @@
         <div class="team-application-fields" id="team-application-fields" hidden>
           <label>Team name<input name="team_name" placeholder="Your team name" /></label>
           <label>Home venue<input name="venue_name" placeholder="Pub, club or venue name" /></label>
-          <label class="full-field">Venue address<input name="venue_address" autocomplete="street-address" placeholder="Full venue address" /></label>
+          <label>Venue address<input name="venue_address" autocomplete="street-address" placeholder="Full venue address" /></label>
+          <label>Match boards available<input name="venue_board_count" type="number" min="1" max="20" value="1" inputmode="numeric" /></label>
           <fieldset class="application-players full-field"><legend>Players</legend><p>Add everyone you currently expect to register. You can add more players later.</p><div id="application-player-list"></div><button type="button" class="add-player-row" id="add-player-row">+ Add another player</button></fieldset>
         </div>
         <label>Anything we should know?<textarea name="message" rows="3" placeholder="Optional"></textarea></label>
